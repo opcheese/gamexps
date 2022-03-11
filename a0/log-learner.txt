@@ -1,0 +1,3 @@
+[2022-03-12 03:25:53.809] learner started
+[2022-03-12 03:25:53.809] Initializing model
+[2022-03-12 03:25:56.884] Initial checkpoint: unetsimplenet_0.fmodel
