@@ -83,7 +83,7 @@ class LRUCache(object):
 class AlphaZeroEvaluator(mcts.Evaluator):
   """An AlphaZero MCTS Evaluator."""
 
-  def __init__(self, game, model, cache_size=2**16):
+  def __init__(self, game, model, cache_size=2**13):
     """An AlphaZero MCTS Evaluator."""
 
     self._model = model

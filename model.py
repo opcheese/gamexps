@@ -113,6 +113,10 @@ class UNet(nn.Module):
         
         self.max_policy = nn.Softmax()
         self.super_head_value = nn.Linear(out_sz[0]*out_sz[1]*num_class,1)
+        self.relu = nn.ReLU()
+
+        self.super_head_value2 = nn.Linear(1,1)
+
         self.tahn_value = nn.Tanh()
         
         self.retain_dim  = retain_dim
@@ -124,6 +128,7 @@ class UNet(nn.Module):
         out = torch.flatten(out, 1)
         #print(out.shape)
         out1 = self.super_head_policy(out)
+        
         #print(out1.shape)
         #print(out1.shape)
         #print(mask.shape)
@@ -132,6 +137,9 @@ class UNet(nn.Module):
         out1 = self.max_policy(out1)
 
         out2 = self.super_head_value(out)
+        out2 = self.relu(out2)
+        out2 = self.super_head_value2(out2)
+
         out2 = self.tahn_value(out2)
         
  
