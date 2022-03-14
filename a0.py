@@ -25,7 +25,10 @@ from open_spiel.python.utils import stats
 from evaluator import AlphaZeroEvaluator
 import main
 import math
+import wandb
 
+
+wandb.init(project="new-5-5-4")
 
 # Time to wait for processes to join.
 JOIN_WAIT_DELAY = 0.001
@@ -217,7 +220,7 @@ class Config(collections.namedtuple(
 
 
 def _init_model_from_config(config):
-  return model.UnetPolicyValueNet(config.width,config.height)
+  return model.UnetPolicyValueNet(config.width,config.height, fmodel_file="unetsimplenet_-1.fmodel")
 
 
 def watcher(fn):
@@ -463,7 +466,7 @@ def learner(*, game, config, actors, evaluators, broadcast_fn, logger):
         n = trajectory.states[index]
         accurate = (n.value >= 0) == (trajectory.returns[n.current_player] >= 0)
         value_accuracies[stage].add(1 if accurate else 0)
-        value_predictions[stage].add(abs(n.value))
+        value_predictions[stage].add(abs(n.value.item()))
 
       if num_states >= learn_rate:
         break
@@ -474,24 +477,31 @@ def learner(*, game, config, actors, evaluators, broadcast_fn, logger):
     losses = {
       "loss":0.0,
       "entropy":0.0,
+      "value":0.0,
+      "policy":0.0,
       "n":0
     }
     replay_buffer.save('lastpickle')
     cgs = CustomGameDataset(replay_buffer)
     trainLoader = torch.utils.data.DataLoader(dataset = cgs, batch_size=64)
     model.policy_value_net.train()
-    epochs = 200
+    epochs = 500
     for k in range(epochs):
       for i, (inputs,masks, target_policy, target_value) in enumerate(trainLoader):
         #data = replay_buffer.sample(config.train_batch_size)
 
         loss = model.train_step(inputs,masks,target_policy,target_value,0.0005)
+        wandb.log(loss)
         losses["loss"]+=loss["loss"]
         losses["entropy"]+=loss["entripy"]
+        losses["value"]+=loss["value"]
+        losses["policy"]+=loss["policy"]
         losses["n"]+=1
 
     losses["loss"]/=losses["n"]
     losses["entropy"]/=losses["n"]
+    losses["value"]/=losses["n"]
+    losses["policy"]/=losses["n"]
 
 
     # Always save a checkpoint, either for keeping or for loading the weights to
@@ -636,18 +646,18 @@ def alpha_zero(config: Config):
 def start():
     print(444)
     config = Config(learning_rate = 0.002,
-        uct_c=1.5,
-        max_simulations=700,
+        uct_c=2.5,
+        max_simulations=1000,
         train_batch_size = 2**6,
         replay_buffer_size = 2**12,
-        replay_buffer_reuse = 16,
+        replay_buffer_reuse = 32,
         weight_decay = 0.0001,
         policy_epsilon = 0.25,
         policy_alpha = 1,
         temperature = 1,
-        temperature_drop=6,
+        temperature_drop=8,
         checkpoint_freq = 10,
-        actors=2,
+        actors=1,
         evaluators=0,
         evaluation_window=100,
         eval_levels=7,
@@ -658,7 +668,7 @@ def start():
         observation_shape=[5,5],
         output_size=5*5,
         path=".",
-        n_in_row=5
+        n_in_row=4
        )
     alpha_zero(config)
     

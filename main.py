@@ -207,6 +207,10 @@ class MNKState():
         """Returns id of the next player to move, or TERMINAL if game is over."""
         return -1 if self._is_terminal else self._cur_player
 
+    def current_player_nt(self):
+        """Returns id of the next player to move, or TERMINAL if game is over."""
+        return self._cur_player
+
     def _legal_actions(self,player):
         """Returns a list of legal actions, sorted in ascending order."""
         return self.legal
@@ -226,9 +230,9 @@ class MNKState():
         res = np.zeros([3,self.height,self.width])
         ch1 = 'x'
         ch2 = 'o'
-        # if self.current_player() == 1:
-        #     ch1 = 'o'
-        #     ch2 = 'x'
+        if self.current_player() == 1:
+            ch1 = 'o'
+            ch2 = 'x'
 
         r1 = np.where(self.board==ch1,1,0)
         r2 = np.where(self.board==ch2,1,0)
@@ -347,6 +351,7 @@ class MNKState():
         if found_victor:
             self._is_terminal = True
             self._player0_score = 1.0 if self._cur_player == 0 else -1.0
+            self._cur_player = 1 - self._cur_player
         elif all(self.board.ravel() != "."):
             self._is_terminal = True
         else:

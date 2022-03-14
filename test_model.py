@@ -17,16 +17,17 @@ def solve_game(state):
   state_str = str(state)
   if state_str in solved:
     return solved[state_str][-1]
-  if state.is_terminal():
-    return state.returns()[0]
+  if state.is_terminal(): 
+      return -state.returns()[state.current_player_nt()]
+
 
   max_player = state.current_player() == 0
   obs = state.observation_tensor()
   act_mask = np.array(state.legal_actions_mask())
-  values = np.full(act_mask.shape, -2 if max_player else 2)
+  values = np.full(act_mask.shape, -2) #if max_player else 2)
   for action in state.legal_actions():
     values[action] = solve_game(state.child(action))
-  value = values.max() if max_player else values.min()
+  value = values.max() #if max_player else values.min()
   
   best_actions = np.where((values == value) & (act_mask == 1))
   policy = np.zeros_like(act_mask)
@@ -36,7 +37,7 @@ def solve_game(state):
   else:
     solved[state_str] = (obs,act_mask, policy, value)
 
-  return value
+  return -value
 
 class CustomGameDataset(Dataset):
     def __init__(self, boards,masks,policies,values):
@@ -73,13 +74,15 @@ if __name__ == "__main__":
     print(123)
     game = main.MNKGame(width=3,height=3,n_in_row=3 )
     state = main.MNKState(game)
-#     st = """xox
-# xoo
-# .x."""
+#     st = """x..
+# o..
+# o.x"""
 #     state = main.MNKState.emulate_state(game,st)
     solve_game(state)
-    a_file = open("data.pkl", "wb")
-    pickle.dump(solved, a_file)
+    a = solved
+    #exit()
+    # a_file = open("data.pkl", "wb")
+    # pickle.dump(solved, a_file)
     # for s in solved:
     #     print(s)
     #     print(solved[s])
@@ -101,15 +104,15 @@ if __name__ == "__main__":
     np_values = np.array(values)
 
     cds = CustomGameDataset(np_obss,np_masks,np_policies,np_values)
-    trainLoader = torch.utils.data.DataLoader(dataset = cds, batch_size=64)
+    trainLoader = torch.utils.data.DataLoader(dataset = cds, batch_size=128)
 
     #pvn = simple_model.PolicyValueNet(3,3)
 
-    pvn = model.UnetPolicyValueNet(3,3)
+    pvn = model.UnetPolicyValueNet(board_width=3,board_height=3)
 
     ##wandb.watch(pvn.policy_value_net)
 
-    epoch = 10000
+    epoch = 5000
     pvn.save_model('simpletext'+str(0)+'.model')
 
     #pvn.load_model('simpletext.model')
@@ -118,9 +121,31 @@ if __name__ == "__main__":
       for i, (inputs,masks, target_policy, target_value) in enumerate(trainLoader):
         # evaluate the model on the test set
       
-        yhat = pvn.train_step(inputs,masks,target_policy,target_value,0.001)
+        yhat = pvn.train_step(inputs,masks,target_policy,target_value,0.01)
         if i%100==0: 
           wandb.log(yhat)
       if k%100==0:
-       pvn.save_model('simpletext'+str(k)+'.model')
+
+
+        st ="""x..
+o..
+o.x"""
+        state = main.MNKState.emulate_state(game,st)
+        tens = state.observation_tensor()
+        print(tens)
+        tens = np.expand_dims(tens, axis=0)
+        t = torch.from_numpy(tens)
+        t = t.to('cuda')
+        t = t.type(torch.cuda.FloatTensor)
+
+        msk = state.legal_actions_mask()
+        m = torch.from_numpy(msk)
+        m = m.to('cuda')
+        m = m.type(torch.cuda.FloatTensor)
+        # ndarray isn't hashable
+        r = pvn.policy_value_net(t,m)
+
+        print(r)
+
+        pvn.save_model('simpletext'+str(k)+'.model')
       

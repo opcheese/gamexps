@@ -33,18 +33,18 @@ def crop_img(tensor, target_tensor):
   return tensor[:,:,delta:tensor_size-delta,delta:tensor_size-delta]
                                     
 class Block(nn.Module):
-    def __init__(self, in_ch, out_ch, ker = 3):
+    def __init__(self, in_ch, out_ch, ker = 5, padding = 0):
         super().__init__()
         
         m_ch = out_ch
         if out_ch>in_ch:
           m_ch = out_ch
         self.chs = (in_ch,out_ch,m_ch)
-        self.conv1 = nn.Conv2d(in_ch, out_ch, ker, padding = 1)
+        self.conv1 = nn.Conv2d(in_ch, out_ch, ker, padding = padding)
         #self.bn1 =  nn.BatchNorm2d(m_ch)
         #self.drop1 = nn.Dropout2d(0.2)        
         self.relu1  = nn.ReLU()
-        self.conv2 = nn.Conv2d(out_ch, out_ch, ker,  padding = 1)
+        self.conv2 = nn.Conv2d(out_ch, out_ch, ker,  padding = padding)
         #self.bn2 =  nn.BatchNorm2d(m_ch)
         self.drop2 = nn.Dropout2d(0.1)        
         
@@ -52,6 +52,7 @@ class Block(nn.Module):
         #print(self.conv1)
     
     def forward(self, x):
+        #print(x.shape)
         #a = self.conv2(self.relu(self.conv1(x)))
         a = self.conv1(x)
        
@@ -67,9 +68,9 @@ class Block(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, chs=(3,32,64,128), ks = [3,3,3,3], pool = 1):
+    def __init__(self, chs=(3,32,64,128), ks = [5,3,3,3], pool = 1, padding=[4,1,1,1]):
         super().__init__()
-        self.enc_blocks = nn.ModuleList([Block(chs[i], chs[i+1],ks[i]) for i in range(len(chs)-1)])
+        self.enc_blocks = nn.ModuleList([Block(chs[i], chs[i+1],ks[i],padding[i]) for i in range(len(chs)-1)])
         self.pool       = nn.MaxPool2d(pool)
     
     def forward(self, x):
@@ -82,11 +83,11 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, chs=(128, 64,32), ks = [3,3,3], pool = 1):
+    def __init__(self, chs=(128, 64,32), ks = [3,3,5],padding=[1,1,4], pool = 1):
         super().__init__()
         self.chs         = chs
         self.upconvs    = nn.ModuleList([nn.ConvTranspose2d(chs[i], chs[i+1], pool, pool) for i in range(len(chs)-1)])
-        self.dec_blocks = nn.ModuleList([Block(chs[i], chs[i+1],ks[i]) for i in range(len(chs)-1)]) 
+        self.dec_blocks = nn.ModuleList([Block(chs[i], chs[i+1],ks[i],padding[i]) for i in range(len(chs)-1)]) 
         
     def forward(self, x, encoder_features):
         for i in range(len(self.chs)-1):
@@ -103,19 +104,25 @@ class Decoder(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, enc_chs=(3,32,64,128), dec_chs=(128, 64, 32), num_class=3, retain_dim=False, out_sz=(8,8), pool = 2):
+    def __init__(self, enc_chs=(3,32,64,128), dec_chs=(128, 64, 32), num_class=1, retain_dim=False, out_sz=(8,8), pool = 2):
         super().__init__()
         self.encoder     = Encoder(enc_chs, pool=pool)
         self.decoder     = Decoder(dec_chs, pool = pool)
         self.head        = nn.Conv2d(dec_chs[-1], num_class, 1)
-
-        self.super_head_policy = nn.Linear(out_sz[0]*out_sz[1]*num_class,out_sz[0]*out_sz[1])
-        
+        if out_sz[0]==5:
+            a = (8+out_sz[0])**2
+        else:
+            a= (8 + out_sz[0])**2
+        #self.super_head_policy = nn.Linear((out_sz[0]*out_sz[1]+2)**2 * num_class,out_sz[0]*out_sz[1])
+        self.super_head_policy = nn.Linear(a,out_sz[0]*out_sz[1])
         self.max_policy = nn.Softmax()
-        self.super_head_value = nn.Linear(out_sz[0]*out_sz[1]*num_class,1)
-        self.relu = nn.ReLU()
+        self.super_head_value = nn.Linear(a,1)
+        self.relu1 = nn.ReLU()
 
         self.super_head_value2 = nn.Linear(1,1)
+        self.relu2 = nn.ReLU()
+
+        self.super_head_value3 = nn.Linear(1,1)
 
         self.tahn_value = nn.Tanh()
         
@@ -137,9 +144,10 @@ class UNet(nn.Module):
         out1 = self.max_policy(out1)
 
         out2 = self.super_head_value(out)
-        out2 = self.relu(out2)
+        out2 = self.relu1(out2)
         out2 = self.super_head_value2(out2)
-
+        out2 = self.relu2(out2)
+        out2 = self.super_head_value3(out2)
         out2 = self.tahn_value(out2)
         
  
@@ -235,7 +243,12 @@ class UnetPolicyValueNet():
         # define the loss = (z - v)^2 - pi^T * log(p) + c||theta||^2
         # Note: the L2 penalty is incorporated in optimizer
         value_loss = F.mse_loss(value.view(-1), winner_batch)
-        policy_loss = -torch.mean(torch.sum(mcts_probs*log_act_probs, 1))
+        #print(mcts_probs.shape)
+        #print(log_act_probs.shape)
+
+        #policy_loss = -torch.mean(torch.sum(mcts_probs*log_act_probs, 1))
+        pl = torch.nn.CrossEntropyLoss()
+        policy_loss =  pl(mcts_probs,log_act_probs)
         loss = value_loss + policy_loss
         # backward and optimize
         loss.backward()
@@ -244,7 +257,7 @@ class UnetPolicyValueNet():
         entropy = -torch.mean(
                 torch.sum(torch.exp(log_act_probs) * log_act_probs, 1)
                 )
-        return {"loss": loss.item(),"entripy":entropy.item()}
+        return {"loss": loss.item(),"entripy":entropy.item(), "value": value_loss.item(), "policy":policy_loss.item()}
         #for pytorch version >= 0.5 please use the following line instead.
         #return loss.item(), entropy.item()
 
@@ -261,12 +274,12 @@ class UnetPolicyValueNet():
         """ save model params to file """
         path = self.path+"_" + str(number) +".fmodel"
         net_params = self.get_policy_param()  # get model params
-        opt_params = self.optimizer.state_dict(),
+        #opt_params = self.optimizer.state_dict(),
 
 
         torch.save({
             'model_state_dict': net_params,
-            'optimizer_state_dict': opt_params
+            #'optimizer_state_dict': opt_params
             }, path)
         
         return path
@@ -325,12 +338,17 @@ class Losses(collections.namedtuple("Losses", "policy value l2")):
 
 if __name__ == '__main__':
   print(torch.cuda.is_available())
-  pvn = UnetPolicyValueNet(3,3)
+  pvn = UnetPolicyValueNet(5,5)
   print(pvn.policy_value_net)
   ##res = pvn.policy_value_net()
 
-  game = main.MNKGame(width=3,height=3,n_in_row=3 )
+  game = main.MNKGame(width=5,height=5,n_in_row=3 )
   state = main.MNKState(game)
+
+  st = """x..
+o..
+o.x"""
+  state = main.MNKState.emulate_state(game,st)
   tens = state.observation_tensor()
   tens = np.expand_dims(tens, axis=0)
   t = torch.from_numpy(tens)
@@ -344,4 +362,11 @@ if __name__ == '__main__':
   tm = tm.type(torch.cuda.FloatTensor)
 
   a = pvn.policy_value_net(t,tm)
+
+  mcts = torch.zeros([25])
+  mcts[4]=1.0
+  mcts=torch.unsqueeze(mcts,0)
+  pvn.train_step(t,tm,mcts.cuda(),torch.as_tensor(1.0).cuda(), 0.001)
+
+  pvn.save_checkpoint(123)
   print(a)

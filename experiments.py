@@ -17,7 +17,7 @@ o.x"""
     state = main.MNKState.emulate_state(game,st)
 
     #pvn = simple_model.PolicyValueNet(3,3,model_file="simpletext400.model")
-    pvn = model.UnetPolicyValueNet(3,3,fmodel_file="unetsimplenet_-1.fmodel")
+    pvn = model.UnetPolicyValueNet(3,3,model_file="simpletext4900.model")
     
     print(state.current_player())
     tens = state.observation_tensor()

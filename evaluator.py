@@ -83,7 +83,7 @@ class LRUCache(object):
 class AlphaZeroEvaluator(mcts.Evaluator):
   """An AlphaZero MCTS Evaluator."""
 
-  def __init__(self, game, model, cache_size=2**13):
+  def __init__(self, game, model, cache_size=2**12):
     """An AlphaZero MCTS Evaluator."""
 
     self._model = model
@@ -119,7 +119,13 @@ class AlphaZeroEvaluator(mcts.Evaluator):
     """Returns a value for the given state."""
     value, _ = self._inference(state)
     value = value.detach().cpu()
-    return np.array([value, -value])
+    res = []
+    if (state.current_player_nt() == 0):
+      res = [value, -value]
+    else :
+      res = [-value, value]
+
+    return res
 
   def prior(self, state):
       # Returns the probabilities for all actions.
