@@ -13,7 +13,7 @@ import wandb
 wandb.init(project="new-tic-tac")
 solved = {}
 
-def solve_game(state):
+def solve_game(state,i):  
   state_str = str(state)
   if state_str in solved:
     return solved[state_str][-1]
@@ -26,7 +26,7 @@ def solve_game(state):
   act_mask = np.array(state.legal_actions_mask())
   values = np.full(act_mask.shape, -2) #if max_player else 2)
   for action in state.legal_actions():
-    values[action] = solve_game(state.child(action))
+    values[action] = solve_game(state.child(action),i+1)
   value = values.max() #if max_player else values.min()
   
   best_actions = np.where((values == value) & (act_mask == 1))
@@ -36,7 +36,8 @@ def solve_game(state):
     solved[state_str] = (obs,act_mask, policy, value)
   else:
     solved[state_str] = (obs,act_mask, policy, value)
-
+  if i==1:
+    print(i)  
   return -value
 
 class CustomGameDataset(Dataset):
@@ -72,17 +73,20 @@ class CustomGameDataset(Dataset):
 
 if __name__ == "__main__":
     print(123)
-    game = main.MNKGame(width=3,height=3,n_in_row=3 )
+    game = main.MNKGame(width=4,height=4,n_in_row=4 )
     state = main.MNKState(game)
 #     st = """x..
 # o..
 # o.x"""
 #     state = main.MNKState.emulate_state(game,st)
-    solve_game(state)
+    solve_game(state,0)
     a = solved
     #exit()
-    # a_file = open("data.pkl", "wb")
-    # pickle.dump(solved, a_file)
+    try: 
+      a_file = open("data.pkl", "wb")
+      pickle.dump(solved, a_file)
+    except:
+      pass 
     # for s in solved:
     #     print(s)
     #     print(solved[s])
@@ -108,7 +112,7 @@ if __name__ == "__main__":
 
     #pvn = simple_model.PolicyValueNet(3,3)
 
-    pvn = model.UnetPolicyValueNet(board_width=3,board_height=3)
+    pvn = model.UnetPolicyValueNet(board_width=5,board_height=5)
 
     ##wandb.watch(pvn.policy_value_net)
 

@@ -19,3 +19,82 @@
 [2022-03-14 12:18:27.417] {'loss': 3.9881829127520323, 'entropy': -2.7155504178106784, 'value': 0.8711414450050261, 'policy': 3.117041468247771, 'n': 16000}
 [2022-03-14 12:18:27.417] Checkpoint saved: unetsimplenet_-1.fmodel
 [2022-03-14 12:18:27.417]
+[2022-03-14 13:24:07.612] Step: 4
+[2022-03-14 13:24:07.618] Collected   134 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 12.2
+[2022-03-14 13:24:07.619] Buffer size: 540. States seen: 540
+[2022-03-14 13:30:25.905] {'loss': 4.013571421290553, 'entropy': -2.715623997289081, 'value': 0.895178029176744, 'policy': 3.1183933924408844, 'n': 21500}
+[2022-03-14 13:30:25.906] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 13:30:25.911]
+[2022-03-14 14:31:57.988] Step: 5
+[2022-03-14 14:31:57.991] Collected   133 states from  10 games, 0.0 states/s. 0.0 states/(s*actor), game length: 13.3
+[2022-03-14 14:31:57.991] Buffer size: 673. States seen: 673
+[2022-03-14 14:39:31.304] {'loss': 3.9871425491099086, 'entropy': -2.71479165629171, 'value': 0.8875959678081673, 'policy': 3.0995465822759662, 'n': 26500}
+[2022-03-14 14:39:31.304] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 14:39:31.308]
+[2022-03-14 15:46:34.650] Step: 6
+[2022-03-14 15:46:34.654] Collected   146 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 13.3
+[2022-03-14 15:46:34.655] Buffer size: 819. States seen: 819
+[2022-03-14 15:56:34.255] {'loss': 3.9590415131896735, 'entropy': -2.714599847957492, 'value': 0.850336306412834, 'policy': 3.1087052061483265, 'n': 32000}
+[2022-03-14 15:56:34.329] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 15:56:34.383]
+[2022-03-14 16:57:06.263] Step: 7
+[2022-03-14 16:57:06.270] Collected   130 states from  10 games, 0.0 states/s. 0.0 states/(s*actor), game length: 13.0
+[2022-03-14 16:57:06.271] Buffer size: 949. States seen: 949
+[2022-03-14 17:08:00.480] {'loss': 3.992650709845225, 'entropy': -2.7152766801579795, 'value': 0.882481961696595, 'policy': 3.110168749554952, 'n': 37500}
+[2022-03-14 17:08:00.480] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 17:08:00.484]
+[2022-03-14 18:08:19.918] Step: 8
+[2022-03-14 18:08:19.926] Collected   130 states from  12 games, 0.0 states/s. 0.0 states/(s*actor), game length: 10.8
+[2022-03-14 18:08:19.926] Buffer size: 1079. States seen: 1079
+[2022-03-14 18:22:51.067] {'loss': 4.021936976892808, 'entropy': -2.7144431904119606, 'value': 0.8813242137471543, 'policy': 3.1406127616489634, 'n': 42500}
+[2022-03-14 18:22:51.067] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 18:22:51.071]
+[2022-03-14 19:23:12.620] Step: 9
+[2022-03-14 19:23:12.622] Collected   135 states from   9 games, 0.0 states/s. 0.0 states/(s*actor), game length: 15.0
+[2022-03-14 19:23:12.622] Buffer size: 1214. States seen: 1214
+[2022-03-14 19:36:58.480] {'loss': 3.992527732186568, 'entropy': -2.714570766581987, 'value': 0.8749525805878796, 'policy': 3.117575151804874, 'n': 47500}
+[2022-03-14 19:36:58.480] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 19:36:58.482]
+[2022-03-14 20:26:38.688] Step: 10
+[2022-03-14 20:26:38.688] Collected   131 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 11.9
+[2022-03-14 20:26:38.688] Buffer size: 1345. States seen: 1345
+[2022-03-14 20:41:30.611] {'loss': 4.003450924374023, 'entropy': -2.715800888952219, 'value': 0.8749694268952634, 'policy': 3.1284814974137074, 'n': 53000}
+[2022-03-14 20:41:30.612] Checkpoint saved: unetsimplenet_10.fmodel
+[2022-03-14 20:41:30.612]
+[2022-03-14 21:27:23.418] Step: 11
+[2022-03-14 21:27:23.418] Collected   128 states from  10 games, 0.0 states/s. 0.0 states/(s*actor), game length: 12.8
+[2022-03-14 21:27:23.418] Buffer size: 1473. States seen: 1473
+[2022-03-14 21:43:29.580] {'loss': 3.997289621838208, 'entropy': -2.7147920559829677, 'value': 0.8777700950740998, 'policy': 3.1195195224942833, 'n': 58000}
+[2022-03-14 21:43:29.581] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 21:43:29.582]
+[2022-03-14 22:31:05.524] Step: 12
+[2022-03-14 22:31:05.524] Collected   135 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 12.3
+[2022-03-14 22:31:05.524] Buffer size: 1608. States seen: 1608
+[2022-03-14 22:48:56.122] {'loss': 4.0066193321962205, 'entropy': -2.7126901818305726, 'value': 0.87323462203896, 'policy': 3.1333847077649737, 'n': 63000}
+[2022-03-14 22:48:56.122] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 22:48:56.123]
+[2022-03-14 23:35:40.371] Step: 13
+[2022-03-14 23:35:40.371] Collected   137 states from  10 games, 0.0 states/s. 0.0 states/(s*actor), game length: 13.7
+[2022-03-14 23:35:40.371] Buffer size: 1745. States seen: 1745
+[2022-03-14 23:55:02.450] {'loss': 4.027073209177838, 'entropy': -2.7091411101017555, 'value': 0.8616489112392394, 'policy': 3.165424297726067, 'n': 68500}
+[2022-03-14 23:55:02.450] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-14 23:55:02.451]
+[2022-03-15 00:44:10.019] Step: 14
+[2022-03-15 00:44:10.019] Collected   136 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 12.4
+[2022-03-15 00:44:10.019] Buffer size: 1881. States seen: 1881
+[2022-03-15 01:05:18.725] {'loss': 4.07219717133775, 'entropy': -2.7149172484663877, 'value': 0.873583650847935, 'policy': 3.198613519577753, 'n': 73500}
+[2022-03-15 01:05:18.725] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-15 01:05:18.727]
+[2022-03-15 01:51:49.194] Step: 15
+[2022-03-15 01:51:49.194] Collected   143 states from  10 games, 0.0 states/s. 0.0 states/(s*actor), game length: 14.3
+[2022-03-15 01:51:49.194] Buffer size: 2024. States seen: 2024
+[2022-03-15 02:15:33.058] {'loss': 4.054190055241375, 'entropy': -2.71443968345984, 'value': 0.8726919211804773, 'policy': 3.1814981343131397, 'n': 79500}
+[2022-03-15 02:15:33.059] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-15 02:15:33.059]
+[2022-03-15 03:03:35.900] Step: 16
+[2022-03-15 03:03:35.900] Collected   132 states from  11 games, 0.0 states/s. 0.0 states/(s*actor), game length: 12.0
+[2022-03-15 03:03:35.900] Buffer size: 2156. States seen: 2156
+[2022-03-15 03:28:43.761] {'loss': 4.057135236590572, 'entropy': -2.7150203999175124, 'value': 0.8830364968763917, 'policy': 3.1740987394180524, 'n': 84500}
+[2022-03-15 03:28:43.761] Checkpoint saved: unetsimplenet_-1.fmodel
+[2022-03-15 03:28:43.761]
+[2022-03-15 03:29:34.189] learner exiting
