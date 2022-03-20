@@ -29,8 +29,8 @@ class CustomGameDataset(Dataset):
         #     self.files.append(X)
 
     def __len__(self):
-        lens = map(len,self.Xs)
-        res = min(lens)-self.batch_size
+        res = len(self.Xs[0])-self.minibatch
+     
         return res
 
     def __getitem__(self,idx):
@@ -41,9 +41,10 @@ class CustomGameDataset(Dataset):
         res4 = torch.empty(size=(self.batch_size,1)).type(torch.cuda.FloatTensor)
 
         ind = -1
+        halfbatch = int(self.minibatch/2) 
         for x_i in self.Xs :
             X = x_i
-            for i in range(idx,idx+self.minibatch):
+            for i in range(idx,idx+halfbatch):
                 ind+=1
                 line = X[i]
                 res1_t = torch.from_numpy(line['obs']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
@@ -55,6 +56,17 @@ class CustomGameDataset(Dataset):
                 res4_t = torch.as_tensor(line['value']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
                 res4[ind] = res4_t
             idx = random.randint(0,self.__len__()-1)
+            for i in range(idx,idx+halfbatch):
+                ind+=1
+                line = X[i]
+                res1_t = torch.from_numpy(line['obs']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
+                res1[ind] = res1_t
+                res2_t = torch.from_numpy(line['policy']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
+                res2[ind] = res2_t
+                res3_t = torch.from_numpy(line['mask']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
+                res3[ind] = res3_t
+                res4_t = torch.as_tensor(line['value']).type(torch.cuda.FloatTensor).cuda().type(torch.cuda.FloatTensor)
+                res4[ind] = res4_t
             # if res1==None:
             #     res1 = torch.from_numpy(line['obs'])
             # else:
@@ -91,7 +103,7 @@ if __name__ == "__main__":
     for i in range(1):
         file_names.append("np444_{}.npy".format(i))
     iterable_dataset = CustomGameDataset(file_names,256)
-    loader = DataLoader(iterable_dataset, batch_size=None)
+    loader = DataLoader(iterable_dataset, batch_size=None, shuffle=True)
     game = main.MNKGame(width=4,height=4,n_in_row=4 )
     state = main.MNKState(game)
     modelNetwork = model.Net(4,4).cuda()
@@ -108,7 +120,7 @@ if __name__ == "__main__":
       for i, (inputs,masks, target_policy, target_value) in  tqdm.tqdm(enumerate(loader)):
         # evaluate the model on the test set
       
-        yhat = pvn.train_step(inputs,masks,target_policy,target_value,0.005)
+        yhat = pvn.train_step(inputs,masks,target_policy,target_value,0.3)
         if i%1000==0: 
           wandb.log(yhat)
           print(yhat)
