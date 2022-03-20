@@ -1,3 +1,4 @@
+from tkinter import W
 import torch
 import torch.nn as nn
 import torchvision
@@ -31,6 +32,125 @@ def crop_img(tensor, target_tensor):
   delta = tensor_size - target_size
   delta = delta//2
   return tensor[:,:,delta:tensor_size-delta,delta:tensor_size-delta]
+
+class Net(nn.Module):
+    """policy-value network module"""
+    def __init__(self, board_width, board_height):
+        super(Net, self).__init__()
+
+        self.board_width = board_width
+        self.board_height = board_height
+        # common layers
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=4, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
+        # action policy layers
+        self.act_conv1 = nn.Conv2d(512, 4, kernel_size=1)
+        self.act_fc1 = nn.Linear(2*board_width*board_height+4,
+                                 board_width*board_height)
+        # state value layers
+        self.val_conv1 = nn.Conv2d(512, 2, kernel_size=1)
+        self.val_fc1 = nn.Linear(board_width*board_height+2, 64)
+        self.val_fc2 = nn.Linear(64, 1)
+
+    def forward(self, state_input,mask):
+        # common layers
+        x = F.relu(self.conv1(state_input))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        # action policy layers
+        x_act = F.relu(self.act_conv1(x))
+        x_act = x_act.view(-1, 2*self.board_width*self.board_height+4)
+        x_act = (self.act_fc1(x_act))
+        #x_act = torch.where(mask==1.0,x_act, -1e32 *torch.ones_like(x_act))
+        x_act = F.softmax(x_act)
+        # state value layers
+        x_val = F.relu(self.val_conv1(x))
+        x_val = x_val.view(-1, self.board_width*self.board_height+2)
+        x_val = F.relu(self.val_fc1(x_val))
+        x_val = F.tanh(self.val_fc2(x_val))
+        return x_act, x_val
+
+class ConvBlock(nn.Module):
+    def __init__(self,width,height):
+        super(ConvBlock, self).__init__()
+        self.width = width
+        self.height = height
+        self.action_size = width*height
+        self.conv1 = nn.Conv2d(3, 128, 3, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(128)
+
+    def forward(self, s):
+        s = s.view(-1, 3, self.width, self.height)  # batch_size x channels x board_x x board_y
+        s = F.relu(self.bn1(self.conv1(s)))
+        return s
+class ResBlock(nn.Module):
+    def __init__(self,width,height, inplanes=128, planes=128, stride=1, downsample=None):
+        super(ResBlock, self).__init__()
+        self.width = width
+        self.height = height
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+    def forward(self, x):
+        residual = x
+        out = self.conv1(x)
+        out = F.relu(self.bn1(out))
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out += residual
+        out = F.relu(out)
+        return out
+    
+class OutBlock(nn.Module):
+    def __init__(self,width,height):
+        super(OutBlock, self).__init__()
+        self.width = width
+        self.height = height
+        self.conv = nn.Conv2d(128, 3, kernel_size=1) # value head
+        self.bn = nn.BatchNorm2d(3)
+        self.fc1 = nn.Linear(3*width*height, 32)
+        self.fc2 = nn.Linear(32, 1)
+        
+        self.conv1 = nn.Conv2d(128, 32, kernel_size=1) # policy head
+        self.bn1 = nn.BatchNorm2d(32)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.fc = nn.Linear(width*height*32, width*height)
+    
+    def forward(self,s,mask):
+        v = F.relu(self.bn(self.conv(s))) # value head
+        v = v.view(-1, 3*self.height*self.width) # value# batch_size X channel X height X width
+        v = F.relu(self.fc1(v))
+        v = torch.tanh(self.fc2(v))
+        
+        p = F.relu(self.bn1(self.conv1(s))) # policy head
+        p = p.view(-1, self.width*self.height*32)
+        p = self.fc(p)
+        p = torch.mul(p, mask)
+        p = self.logsoftmax(p).exp()
+        return p, v
+    
+class ConnectNet(nn.Module):
+    def __init__(self,width,height,bl_num=40):
+        super(ConnectNet, self).__init__()
+        self.width = width
+        self.height = height
+        self.bl_num = bl_num
+        self.conv = ConvBlock(width,height)
+        for block in range(bl_num):
+            setattr(self, "res_%i" % block,ResBlock(width,height))
+        self.outblock = OutBlock(width,height)
+    
+    def forward(self,s,mask):
+        s = self.conv(s)
+        for block in range(self.bl_num):
+            s = getattr(self, "res_%i" % block)(s)
+        s = self.outblock(s,mask)
+        return s
                                     
 class Block(nn.Module):
     def __init__(self, in_ch, out_ch, ker = 5, padding = 0):
@@ -155,9 +275,50 @@ class UNet(nn.Module):
         #     out = F.interpolate(out, out_sz)
         return out1,out2
 
+
+class FFNet(nn.Module):
+    def __init__(self, h,w):
+        super(FFNet,self).__init__()
+        inpSize = h*w
+        self.l1 = nn.Linear(inpSize*3, inpSize*3*2+1)
+        self.act1 = nn.ReLU()
+        self.l2 = nn.Linear(inpSize*3*2+1,inpSize)
+        self.act2 = nn.ReLU()
+        self.bn = nn.BatchNorm1d(inpSize)
+        #self.super_head_policy = nn.Linear((out_sz[0]*out_sz[1]+2)**2 * num_class,out_sz[0]*out_sz[1])
+        self.super_head_policy = nn.Linear(inpSize,inpSize)
+        self.max_policy = nn.Softmax()
+        self.super_head_value = nn.Linear(inpSize,1)
+        self.relu1 = nn.ReLU()
+
+        self.super_head_value3 = nn.Linear(1,1)
+
+        self.tahn_value = nn.Tanh()
+
+
+    def forward(self, x,mask):
+        x = torch.flatten(x, 1)
+        out = self.l1(x)
+        out = self.act1(out)
+        out = self.l2(out)
+        out = self.act2(out)
+        out = self.bn(out)
+        out1 = self.super_head_policy(out)
+        out1 = torch.mul(out1,mask)
+        out1 = self.max_policy(out1)
+        out2 = self.super_head_value(out)
+        out2 = self.relu1(out2)
+        out2 = self.super_head_value3(out2)
+        out2 = self.tahn_value(out2)
+        
+ 
+        # if self.retain_dim:
+        #     out = F.interpolate(out, out_sz)
+        return out1,out2
+
 class UnetPolicyValueNet():
     """policy-value network """
-    def __init__(self, board_width, board_height,
+    def __init__(self, board_width, board_height, model = None,
                  model_file=None, fmodel_file=None, use_gpu=True, path = "unetsimplenet"):
         self.use_gpu = use_gpu
         self.board_width = board_width
@@ -167,13 +328,20 @@ class UnetPolicyValueNet():
         if board_height<8 or board_width<9:
           pool = 1
         # the policy value net module
-        if self.use_gpu:
-            self.policy_value_net = UNet(out_sz=(board_width,board_height),pool=pool).cuda()
+        if model!=None:
+            self.policy_value_net = model
         else:
-            self.policy_value_net = UNet(out_sz=(board_width,board_height),pool=pool)
-       
-        self.optimizer = optim.Adam(self.policy_value_net.parameters(),
-                                    weight_decay=self.l2_const)
+            if self.use_gpu:
+               self.policy_value_net = ConnectNet(board_width,board_height,40).cuda()
+                #self.policy_value_net = UNet(out_sz=(board_width,board_height),pool=pool).cuda()
+            else:
+               self.policy_value_net = ConnectNet(board_width,board_height,40)
+
+                #self.policy_value_net = UNet(out_sz=(board_width,board_height),pool=pool)
+        
+        # self.optimizer = optim.Adam(self.policy_value_net.parameters(),
+        #                                 weight_decay=self.l2_const)
+        self.optimizer = optim.SGD(self.policy_value_net.parameters(), lr =0.001)
 
         self.path = path
 
@@ -242,7 +410,7 @@ class UnetPolicyValueNet():
         log_act_probs, value = self.policy_value_net(state_batch,mask_batch)
         # define the loss = (z - v)^2 - pi^T * log(p) + c||theta||^2
         # Note: the L2 penalty is incorporated in optimizer
-        value_loss = F.mse_loss(value.view(-1), winner_batch)
+        value_loss = F.mse_loss(value, winner_batch)
         #print(mcts_probs.shape)
         #print(log_act_probs.shape)
 
@@ -255,7 +423,7 @@ class UnetPolicyValueNet():
         self.optimizer.step()
         # calc policy entropy, for monitoring only
         entropy = -torch.mean(
-                torch.sum(torch.exp(log_act_probs) * log_act_probs, 1)
+                torch.sum(torch.log(log_act_probs) * log_act_probs, 1)
                 )
         return {"loss": loss.item(),"entripy":entropy.item(), "value": value_loss.item(), "policy":policy_loss.item()}
         #for pytorch version >= 0.5 please use the following line instead.
@@ -338,16 +506,18 @@ class Losses(collections.namedtuple("Losses", "policy value l2")):
 
 if __name__ == '__main__':
   print(torch.cuda.is_available())
-  pvn = UnetPolicyValueNet(5,5)
+  model = Net(4,4).cuda()
+  pvn = UnetPolicyValueNet(4,4,model = model)
   print(pvn.policy_value_net)
   ##res = pvn.policy_value_net()
 
-  game = main.MNKGame(width=5,height=5,n_in_row=3 )
+  game = main.MNKGame(width=4,height=4,n_in_row=4 )
   state = main.MNKState(game)
 
-  st = """x..
-o..
-o.x"""
+  st ="""x...
+....
+o.x.
+o..x"""
   state = main.MNKState.emulate_state(game,st)
   tens = state.observation_tensor()
   tens = np.expand_dims(tens, axis=0)
@@ -361,12 +531,14 @@ o.x"""
   tm = tm.to('cuda')
   tm = tm.type(torch.cuda.FloatTensor)
 
+
+
   a = pvn.policy_value_net(t,tm)
 
-  mcts = torch.zeros([25])
+  mcts = torch.zeros([16])
   mcts[4]=1.0
   mcts=torch.unsqueeze(mcts,0)
-  pvn.train_step(t,tm,mcts.cuda(),torch.as_tensor(1.0).cuda(), 0.001)
+  pvn.train_step(t,tm,mcts.cuda(),torch.as_tensor([[1.0]]).cuda(), 0.3)
 
   pvn.save_checkpoint(123)
   print(a)

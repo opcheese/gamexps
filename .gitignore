@@ -5,3 +5,5 @@ wandb
 *.model
 *.pprof
 *.frames
+*.npy
+a0/
